@@ -132,7 +132,12 @@ HRESULT WINAPI mDrawIndexedPrimitive(LPDIRECT3DDEVICE9 pDevice, D3DPRIMITIVETYPE
 		}
 		if(!AppManager->bIsDumping && AppManager->bWasDumping)
 		{
-			AppManager->UpdateInfoFile();
+			string tmpstr = "Finished Dump Number ";
+			itoa(AppManager->iTotalDumps + 1, debug, 10);
+			tmpstr += debug;
+			//MessageBox(NULL, tmpstr.c_str(), "DEBUG", MB_OK);
+			AppManager->iTotalDumps +=1 ;
+			AppManager->WriteInfoFile();
 			AppManager->bWasDumping = false;
 		}
 	}
