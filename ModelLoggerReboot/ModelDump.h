@@ -4,7 +4,7 @@
 #include <ctime>
 #include <string>
 #include "cModel.h"
-#include <logger.h>
+//#include <logger.h>
 
 //CURRENT TASKS:
 //Write chunk to dump file, make it all work by 9:30pm
@@ -13,7 +13,7 @@
 //NEXT TASK:
 //Scan, sort and remove duplicates.
 
-cLogger Logger;
+//cLogger Logger;
 char debug[256];
 const int MODELS_PER_CHUNK = 250;
 BYTE CurrentVersion = 0x00;
@@ -151,7 +151,7 @@ void cAppManager::ReadInfoFile()
 		
 		getline(InfoFileIn, szGameName);
 		getline(InfoFileIn, tmp);
-		//iTotalDumps = atoi(tmp.c_str());
+		iTotalDumps = atoi(tmp.c_str());
 		//MessageBox(NULL, itoa(iTotalDumps, debug, 10), "DEBUG", MB_OK);
 	}
 	InfoFileIn.close();

@@ -38,10 +38,19 @@ int iSelection = 0;
  
 bool bPopList = false, bDrawElements = false, bAddNew = false, bRefresh = false; //logic bools
 char b[32];
+string strTmp;
 UINT uiLastStride = 0;
 bool bdip = true;
 
-
+//test loading fin
+bool bDrawItemsInFIN = false;
+int iNumItemsinFIN = 0;
+int iFINSelection = 0;
+cModel DrawList[1000];
+ifstream FinFile;
+bool bShowError = true;
+string dbErrorString;
+//////
 HRESULT WINAPI mEndScene(LPDIRECT3DDEVICE9 pDevice)
 {
 	//MessageBox(NULL, "Entering endscene", "NO ERROR", MB_OK);
@@ -60,14 +69,36 @@ HRESULT WINAPI mEndScene(LPDIRECT3DDEVICE9 pDevice)
 			//Logger.WriteLog("Failed");
 			MessageBox(NULL, "AppManager failed to Init", "ERROR", MB_OK);
 		}
+		if (Red == NULL)
+			D3DXCreateTextureFromFileInMemory(pDevice, (LPCVOID)&bRed, sizeof(bRed), &Red);
+		if (Green == NULL)
+			D3DXCreateTextureFromFileInMemory(pDevice, (LPCVOID)&bGreen, sizeof(bGreen), &Green);
 	}
 
-    m_Rect.top = 75;
-    strcpy(b, "DX init seems to be OK");
-    dx_Font->DrawTextA(NULL, b, strlen(b), &m_Rect, DT_NOCLIP, D3DCOLOR_XRGB(0, 0, 255));
-	m_Rect.top += 15;
+    m_Rect.top = 210;
+	if (bDrawItemsInFIN)
+	{
+		strcpy(b, "Drawing!");
+		dx_Font->DrawTextA(NULL, b, strlen(b), &m_Rect, DT_NOCLIP, D3DCOLOR_XRGB(255, 0, 0));
+		m_Rect.top += 15;
+
+		strTmp.clear();
+		strTmp = "Num items in FIN: ";
+		strTmp += itoa(iNumItemsinFIN, b, 10);
+		dx_Font->DrawTextA(NULL, strTmp.c_str(), strTmp.length(), &m_Rect, DT_NOCLIP, D3DCOLOR_XRGB(255, 0, 0));
+		m_Rect.top += 15;
+
+		strTmp.clear();
+		strTmp = "FIN selection: ";
+		strTmp += itoa(iFINSelection + 1, b, 10);
+		dx_Font->DrawTextA(NULL, strTmp.c_str(), strTmp.length(), &m_Rect, DT_NOCLIP, D3DCOLOR_XRGB(255, 0, 0));
+		m_Rect.top += 15;
+	}
 	strcpy(b, "Status of Hooks:");
 	dx_Font->DrawTextA(NULL, b, strlen(b), &m_Rect, DT_NOCLIP, D3DCOLOR_XRGB(0, 0, 255));
+	m_Rect.top += 15;
+	strcpy(b, "Endscene");
+	dx_Font->DrawTextA(NULL, b, strlen(b), &m_Rect, DT_NOCLIP, D3DCOLOR_XRGB(0, 255, 0));
 	m_Rect.top += 15;
 	strcpy(b, "DrawIndexedPrimitive");
 	if(bdip)
@@ -83,6 +114,27 @@ HRESULT WINAPI mEndScene(LPDIRECT3DDEVICE9 pDevice)
 	{
 		bPopList = !bPopList;
 	}
+	if (GetAsyncKeyState(VK_DELETE)&1)
+	{
+		bDrawItemsInFIN = !bDrawItemsInFIN;
+	}
+	if (GetAsyncKeyState(VK_UP) & 1)
+	{
+		iFINSelection++;
+	}
+	if (GetAsyncKeyState(VK_DOWN) & 1)
+	{
+		iFINSelection--;
+	}
+
+	if (iFINSelection < 0)
+	{
+		iFINSelection = 0;
+	}
+	if (iFINSelection >= iNumItemsinFIN)
+	{
+		iFINSelection = iNumItemsinFIN - 1;
+	}
 
 	if(bPopList)
 	{ 
@@ -91,6 +143,39 @@ HRESULT WINAPI mEndScene(LPDIRECT3DDEVICE9 pDevice)
 		dx_Font->DrawTextA(NULL, b, strlen(b), &m_Rect, DT_NOCLIP, D3DCOLOR_XRGB(255, 0, 00));
 	}
 
+	if (bDrawItemsInFIN)
+	{
+		if (iNumItemsinFIN == 0)
+		{
+			FinFile.open("dumps\\rfgi.fin");
+				if (!FinFile)
+				{
+					dbErrorString = "Cant load FIN";
+				}
+				else
+				{
+					FinFile >> iNumItemsinFIN;
+					for (int i = 0; i < iNumItemsinFIN; ++i)
+					{
+						FinFile >> DrawList[i].NumVertices;
+						FinFile >> DrawList[i].primCount;
+						FinFile >> DrawList[i].stride;
+					}
+				}
+		}
+	}
+	else
+	{
+		if (FinFile.is_open())
+		{
+			FinFile.close();
+		}
+	}
+
+	m_Rect.top += 15;
+	
+	if (bShowError)
+		dx_Font->DrawTextA(NULL, dbErrorString.c_str(), dbErrorString.length(), &m_Rect, DT_NOCLIP, D3DCOLOR_XRGB(255, 0, 00));
 
     return oEndScene(pDevice);
 }
@@ -99,6 +184,7 @@ HRESULT WINAPI mEndScene(LPDIRECT3DDEVICE9 pDevice)
 HRESULT WINAPI mDrawIndexedPrimitive(LPDIRECT3DDEVICE9 pDevice, D3DPRIMITIVETYPE PrimType,INT BaseVertexIndex,UINT MinVertexIndex,UINT NumVertices,UINT startIndex,UINT primCount)
 {
 	//MessageBox(NULL, "In DIP", "NO ERROR", MB_OK);
+	bdip = true;
 	//Logger.WriteLog("Calling GetStreamSource");
 	IDirect3DVertexBuffer9* vertStreamData;
     UINT uOffsetInBytes;
@@ -132,14 +218,23 @@ HRESULT WINAPI mDrawIndexedPrimitive(LPDIRECT3DDEVICE9 pDevice, D3DPRIMITIVETYPE
 		}
 		if(!AppManager->bIsDumping && AppManager->bWasDumping)
 		{
-			string tmpstr = "Finished Dump Number ";
-			itoa(AppManager->iTotalDumps + 1, debug, 10);
-			tmpstr += debug;
-			//MessageBox(NULL, tmpstr.c_str(), "DEBUG", MB_OK);
-			AppManager->iTotalDumps +=1 ;
+			AppManager->iTotalDumps += 1 ;
 			AppManager->WriteInfoFile();
 			AppManager->bWasDumping = false;
 		}
+	}
+	if (bDrawItemsInFIN)
+	{
+		if (DrawList[iFINSelection].NumVertices == NumVertices &&
+			DrawList[iFINSelection].primCount == primCount &&
+			DrawList[iFINSelection].stride == uStride)
+			{
+				pDevice->SetRenderState(D3DRS_ZENABLE, false);
+				pDevice->SetTexture(0, Green);
+				oDrawIndexedPrimitive(pDevice, PrimType, BaseVertexIndex, MinVertexIndex, NumVertices, startIndex, primCount);
+				pDevice->SetRenderState(D3DRS_ZENABLE, true);
+				pDevice->SetTexture(0, Red);
+			}
 	}
 	/*pDevice->SetRenderState( D3DRS_ZENABLE,false );
     pDevice->SetTexture(0, Green);

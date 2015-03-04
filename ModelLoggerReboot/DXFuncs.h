@@ -29,7 +29,9 @@ void DX_Init(DWORD* table)
     table[ES]   = pVTable[42];
     table[DIP]  = pVTable[82];
     table[SSS]  = pVTable[100];
- 
+	
+
+
     DestroyWindow(hWnd);
 }
  

@@ -29,8 +29,5 @@
     <ClInclude Include="ModelDump.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="hashtable.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
   </ItemGroup>
 </Project>
