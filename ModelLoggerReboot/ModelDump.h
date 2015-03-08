@@ -55,6 +55,7 @@ public:
 	ofstream DumpFileOut;
 	ifstream InfoFileIn;
 	ofstream InfoFileOut;
+	
 	bool bIsDumping;
 	bool bWasDumping;
 	int iTotalChunks;
@@ -69,6 +70,11 @@ public:
 	void WriteInfoFile();
 	void ReadInfoFile();
 	void CreateInfoFile();
+	//New test stuff it not thought out properly yet
+	cModel *DrawList;
+	cModel *TempList;
+	ifstream FinFileIn;
+	int LoadFinFile();
 };
 /*
 cAppManager is used to handle everything. At the moment it is very basic but it has a lot of room for expansion.
@@ -77,6 +83,8 @@ cAppManager is used to handle everything. At the moment it is very basic but it 
 */
 void cAppManager::Initialize()
 {
+	//TODO create directory if it doesnt exist
+	DrawList = NULL;
 	CurrentChunk = new sChunk;
 	DumpFile = new sModelDumpFilev1;
 	bIsDumping = false;
@@ -172,6 +180,47 @@ void cAppManager::Cleanup()
 {
 	delete DumpFile;
 	delete CurrentChunk;
+}
+
+int cAppManager::LoadFinFile()
+{
+	int size = 0; // TODO class up FIN stuff
+	this->FinFileIn.open("dumps\\" + this->szGameName + ".fin");
+	if (this->FinFileIn)
+	{
+		this->FinFileIn >> size;
+		if (this->DrawList == NULL) //if its fresh
+		{
+			this->DrawList = new cModel[size];
+		}
+		else //get rid of it, start anew
+		{
+			delete this->DrawList;
+			this->DrawList = new cModel[size];
+		}
+		for (int i = 0; i < size; ++i)
+		{
+			this->FinFileIn >> DrawList[i].NumVertices;
+			this->FinFileIn >> DrawList[i].primCount;
+			this->FinFileIn >> DrawList[i].stride;
+		}
+
+		this->FinFileIn.close();
+
+		if (this->DrawList != NULL)
+		{
+			return size;
+		}
+		else
+		{
+			MessageBox(NULL, "DrawList NULL", "SadFace", MB_OK);
+			return -1;
+		}
+	}
+	else
+	{
+		return -1;
+	}
 }
 
 cAppManager *AppManager = NULL;

@@ -46,8 +46,7 @@ bool bdip = true;
 bool bDrawItemsInFIN = false;
 int iNumItemsinFIN = 0;
 int iFINSelection = 0;
-cModel DrawList[1000];
-ifstream FinFile;
+cModel DrawList[10000];
 bool bShowError = true;
 string dbErrorString;
 //////
@@ -68,7 +67,7 @@ HRESULT WINAPI mEndScene(LPDIRECT3DDEVICE9 pDevice)
 		{
 			//Logger.WriteLog("Failed");
 			MessageBox(NULL, "AppManager failed to Init", "ERROR", MB_OK);
-		}
+		} 
 		if (Red == NULL)
 			D3DXCreateTextureFromFileInMemory(pDevice, (LPCVOID)&bRed, sizeof(bRed), &Red);
 		if (Green == NULL)
@@ -85,15 +84,16 @@ HRESULT WINAPI mEndScene(LPDIRECT3DDEVICE9 pDevice)
 		strTmp.clear();
 		strTmp = "Num items in FIN: ";
 		strTmp += itoa(iNumItemsinFIN, b, 10);
-		dx_Font->DrawTextA(NULL, strTmp.c_str(), strTmp.length(), &m_Rect, DT_NOCLIP, D3DCOLOR_XRGB(255, 0, 0));
+		dx_Font->DrawTextA(NULL, strTmp.c_str(), strTmp.length(), &m_Rect, DT_NOCLIP, D3DCOLOR_XRGB(255, 255, 255));
 		m_Rect.top += 15;
 
 		strTmp.clear();
 		strTmp = "FIN selection: ";
 		strTmp += itoa(iFINSelection + 1, b, 10);
-		dx_Font->DrawTextA(NULL, strTmp.c_str(), strTmp.length(), &m_Rect, DT_NOCLIP, D3DCOLOR_XRGB(255, 0, 0));
+		dx_Font->DrawTextA(NULL, strTmp.c_str(), strTmp.length(), &m_Rect, DT_NOCLIP, D3DCOLOR_XRGB(255, 255, 255));
 		m_Rect.top += 15;
 	}
+	m_Rect.top += 15;
 	strcpy(b, "Status of Hooks:");
 	dx_Font->DrawTextA(NULL, b, strlen(b), &m_Rect, DT_NOCLIP, D3DCOLOR_XRGB(0, 0, 255));
 	m_Rect.top += 15;
@@ -117,6 +117,10 @@ HRESULT WINAPI mEndScene(LPDIRECT3DDEVICE9 pDevice)
 	if (GetAsyncKeyState(VK_DELETE)&1)
 	{
 		bDrawItemsInFIN = !bDrawItemsInFIN;
+		if (bDrawItemsInFIN)
+		{
+			iNumItemsinFIN = AppManager->LoadFinFile();
+		}
 	}
 	if (GetAsyncKeyState(VK_UP) & 1)
 	{
@@ -125,6 +129,18 @@ HRESULT WINAPI mEndScene(LPDIRECT3DDEVICE9 pDevice)
 	if (GetAsyncKeyState(VK_DOWN) & 1)
 	{
 		iFINSelection--;
+	}
+	if (GetAsyncKeyState(VK_END) & 1)
+	{
+		iFINSelection = 0;
+	}
+	if (GetAsyncKeyState(VK_LEFT) & 1)
+	{
+		iFINSelection -= 100;
+	}
+	if (GetAsyncKeyState(VK_RIGHT) & 1)
+	{
+		iFINSelection += 100;
 	}
 
 	if (iFINSelection < 0)
@@ -143,39 +159,13 @@ HRESULT WINAPI mEndScene(LPDIRECT3DDEVICE9 pDevice)
 		dx_Font->DrawTextA(NULL, b, strlen(b), &m_Rect, DT_NOCLIP, D3DCOLOR_XRGB(255, 0, 00));
 	}
 
-	if (bDrawItemsInFIN)
-	{
-		if (iNumItemsinFIN == 0)
-		{
-			FinFile.open("dumps\\rfgi.fin");
-				if (!FinFile)
-				{
-					dbErrorString = "Cant load FIN";
-				}
-				else
-				{
-					FinFile >> iNumItemsinFIN;
-					for (int i = 0; i < iNumItemsinFIN; ++i)
-					{
-						FinFile >> DrawList[i].NumVertices;
-						FinFile >> DrawList[i].primCount;
-						FinFile >> DrawList[i].stride;
-					}
-				}
-		}
-	}
-	else
-	{
-		if (FinFile.is_open())
-		{
-			FinFile.close();
-		}
-	}
 
 	m_Rect.top += 15;
 	
 	if (bShowError)
+	{
 		dx_Font->DrawTextA(NULL, dbErrorString.c_str(), dbErrorString.length(), &m_Rect, DT_NOCLIP, D3DCOLOR_XRGB(255, 0, 00));
+	}
 
     return oEndScene(pDevice);
 }
@@ -193,6 +183,7 @@ HRESULT WINAPI mDrawIndexedPrimitive(LPDIRECT3DDEVICE9 pDevice, D3DPRIMITIVETYPE
 	//Logger.WriteLog("Done");
 	if(bPopList)
 	{
+		AppManager->ReadInfoFile();
 		AppManager->bIsDumping = true;
 		AppManager->bWasDumping = true;
 		//Logger.WriteLog("Populating List...");
@@ -218,6 +209,7 @@ HRESULT WINAPI mDrawIndexedPrimitive(LPDIRECT3DDEVICE9 pDevice, D3DPRIMITIVETYPE
 		}
 		if(!AppManager->bIsDumping && AppManager->bWasDumping)
 		{
+			
 			AppManager->iTotalDumps += 1 ;
 			AppManager->WriteInfoFile();
 			AppManager->bWasDumping = false;
@@ -225,9 +217,9 @@ HRESULT WINAPI mDrawIndexedPrimitive(LPDIRECT3DDEVICE9 pDevice, D3DPRIMITIVETYPE
 	}
 	if (bDrawItemsInFIN)
 	{
-		if (DrawList[iFINSelection].NumVertices == NumVertices &&
-			DrawList[iFINSelection].primCount == primCount &&
-			DrawList[iFINSelection].stride == uStride)
+		if (AppManager->DrawList[iFINSelection].NumVertices == NumVertices &&
+			AppManager->DrawList[iFINSelection].primCount == primCount &&
+			AppManager->DrawList[iFINSelection].stride == uStride)
 			{
 				pDevice->SetRenderState(D3DRS_ZENABLE, false);
 				pDevice->SetTexture(0, Green);
@@ -276,4 +268,5 @@ BOOL WINAPI DllMain(HINSTANCE hInstance, DWORD Reason, LPVOID lpReserved)
         break;
     }
     return true;
-}
+}			
+
