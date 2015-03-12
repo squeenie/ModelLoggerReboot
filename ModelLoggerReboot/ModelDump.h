@@ -1,17 +1,20 @@
+#ifndef _MODELDUMP_H_
+#define _MODELDUMP_H_
+
 #include <iostream>
 #include <fstream>
 #include <Windows.h>
 #include <ctime>
 #include <string>
 #include "cModel.h"
+#include <cMenu.h>
+#include <dirent.h>
 //#include <logger.h>
 
-//CURRENT TASKS:
-//Write chunk to dump file, make it all work by 9:30pm
-//Status: Done...at 11:46pm the next day, should plan ahead (still have to figure out a decent naming scheme or something)
-
-//NEXT TASK:
-//Scan, sort and remove duplicates.
+//TODO:
+//Create form
+//Create favourites list, just one for now
+//Add models to list via form
 
 //cLogger Logger;
 char debug[256];
@@ -32,7 +35,6 @@ struct sModelDumpFilev1
 };
 
 struct sInfoFile //This will be used to keep track of seperate dumps, note which have been analyzed etc. We'll work it out on the fly cause that always works right
-
 {
 	string szGameName;
 	int iNumDumps; //Work the rest out later, this was basically a solution to getting unique file names for different dumps but the idea became a bit more organic
@@ -70,29 +72,68 @@ public:
 	void WriteInfoFile();
 	void ReadInfoFile();
 	void CreateInfoFile();
-	//New test stuff it not thought out properly yet
+	//New test stuff ie not thought out properly yet
 	cModel *DrawList;
 	cModel *TempList;
+	cModel FavList[100]; // Change to dynamic
 	ifstream FinFileIn;
+	cForm TestForm;
 	int LoadFinFile();
+	int FindFinFiles();
+	int iNumFins;
+	string szFinList[32]; //fix this
+	bool bFinListInitialized;
+	ID3DXLine *ptrLine;
 };
 /*
 cAppManager is used to handle everything. At the moment it is very basic but it has a lot of room for expansion.
 <TODO>
-*Add notes
+*Add notes/documentation etc
 */
 void cAppManager::Initialize()
 {
 	//TODO create directory if it doesnt exist
-	DrawList = NULL;
-	CurrentChunk = new sChunk;
-	DumpFile = new sModelDumpFilev1;
-	bIsDumping = false;
-	bWasDumping = false;
-	CurrentChunk->ClearChunk();
-	iTotalChunks = 0;
-	iTotalDumps = 0;
-	ReadInfoFile();
+	this->DrawList = NULL;
+	this->CurrentChunk = new sChunk;
+	this->DumpFile = new sModelDumpFilev1;
+	this->bIsDumping = false;
+	this->bWasDumping = false;
+	this->CurrentChunk->ClearChunk();
+	this->iTotalChunks = 0;
+	this->iTotalDumps = 0;
+	this->ReadInfoFile();
+	//this->szFinList = NULL;
+	this->iNumFins = 0;
+
+	//test stuff
+	this->TestForm.x = 500;
+	this->TestForm.y = 50;
+	this->TestForm.bDraw = true;
+	this->TestForm.iHeight = 200;
+	this->TestForm.iWidth = 400;
+	this->TestForm.r = 110;
+	this->TestForm.g = 110;
+	this->TestForm.b = 110;
+	this->TestForm.a = 125;
+	this->TestForm.szFormName = "TestForm";
+	this->TestForm.szFormTitle = "TestFormTitle";
+
+	this->TestForm.pButtonList = new cButton;
+	this->TestForm.pButtonList->szButtonText = "Nails";
+	this->TestForm.pButtonList->szButtonName = "TestButton";
+	this->TestForm.pButtonList->iHeight = 32;
+	this->TestForm.pButtonList->iWidth = 64;
+	this->TestForm.pButtonList->x = this->TestForm.x + 50;
+	this->TestForm.pButtonList->y = this->TestForm.y + 75;
+
+	this->TestForm.pCloseBox = new cCheckBox;
+	this->TestForm.pCloseBox->width = 10;
+	this->TestForm.pCloseBox->height = 10;
+	this->TestForm.pCloseBox->r = 0;
+	this->TestForm.pCloseBox->g = 0;
+	this->TestForm.pCloseBox->b = 255;
+	this->TestForm.pCloseBox->x = this->TestForm.x + (this->TestForm.iWidth - 4) - this->TestForm.pCloseBox->width - 4;
+	this->TestForm.pCloseBox->y = this->TestForm.y + 4;
 }
 
 void cAppManager::DumpChunk()
@@ -175,7 +216,6 @@ void cAppManager::WriteInfoFile()
 	iTotalChunks = 0;
 }
 
-
 void cAppManager::Cleanup()
 {
 	delete DumpFile;
@@ -223,4 +263,39 @@ int cAppManager::LoadFinFile()
 	}
 }
 
+int cAppManager::FindFinFiles()
+{
+	this->iNumFins = 0;
+	char tmp[250];
+	char *extPtr = NULL;
+	int tmpint = 0;
+	GetCurrentDirectory(250, tmp);
+	strcat(tmp, "\\dumps");
+	
+	DIR *dir = opendir(tmp);
+	if (!dir)
+	{
+		return -1;
+	}
+
+	dirent *entry;
+	while (entry = readdir(dir))
+	{
+		if (this->iNumFins < 16)
+		{
+			extPtr = strstr(entry->d_name, ".fin");
+			if (extPtr)
+			{
+				this->szFinList[this->iNumFins] = entry->d_name;
+				this->iNumFins++;
+			}
+		}
+	}
+
+	closedir(dir);
+	return this->iNumFins;
+}
+
 cAppManager *AppManager = NULL;
+
+#endif

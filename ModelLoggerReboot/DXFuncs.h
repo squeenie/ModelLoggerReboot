@@ -1,3 +1,5 @@
+#pragma once
+
 #include <Windows.h>
 #include <d3dx9.h>
 #include <d3d9.h>
@@ -6,8 +8,8 @@ const int ES = 0;
 const int DIP = 1;
 const int SSS = 2;
  
-ID3DXFont* dx_Font = NULL;
- 
+ID3DXFont *dx_Font = NULL;
+ID3DXLine *ptrLine = NULL; // not working fix asap
 //Credits to Drunken Cheetah
 LRESULT CALLBACK MsgProc(HWND hwnd,UINT uMsg,WPARAM wParam,LPARAM lParam){return DefWindowProc(hwnd, uMsg, wParam, lParam);} 
 void DX_Init(DWORD* table)
@@ -30,55 +32,55 @@ void DX_Init(DWORD* table)
     table[DIP]  = pVTable[82];
     table[SSS]  = pVTable[100];
 	
-
+	//D3DXCreateLine(pd3dDevice, &ptrLine);
 
     DestroyWindow(hWnd);
 }
  
-void DrawFilledBox(ID3DXLine* pLine, int x, int y, int w, int h, int r, int g, int b, int a) 
+void DrawFilledBox(int x, int y, int w, int h, int r, int g, int b, int a)
 { 
     D3DXVECTOR2 vLine[2]; 
  
-    pLine->SetWidth( w ); 
-    pLine->SetAntialias( false ); 
-    pLine->SetGLLines( true ); 
+    ptrLine->SetWidth( w ); 
+    ptrLine->SetAntialias( false ); 
+    ptrLine->SetGLLines( true ); 
       
     vLine[0].x = x + w/2; 
     vLine[0].y = y; 
     vLine[1].x = x + w/2; 
     vLine[1].y = y + h; 
  
-    pLine->Begin( ); 
-    pLine->Draw( vLine, 2, D3DCOLOR_RGBA( r, g, b, a ) ); 
-    pLine->End( ); 
+    ptrLine->Begin( ); 
+    ptrLine->Draw( vLine, 2, D3DCOLOR_RGBA( r, g, b, a ) ); 
+    ptrLine->End( ); 
 } 
  
-void DrawLine(ID3DXLine* pLine, float StartX, float StartY, float EndX, float EndY, int w, int r, int g, int b, int a) 
+void DrawLine(float StartX, float StartY, float EndX, float EndY, int w, int r, int g, int b, int a)
 {
       
  
     D3DXVECTOR2 vLine[2]; 
  
-    pLine->SetWidth( w ); 
-    pLine->SetAntialias( false ); 
-    pLine->SetGLLines( true ); 
+    ptrLine->SetWidth( w ); 
+    ptrLine->SetAntialias( false ); 
+    ptrLine->SetGLLines( true ); 
       
     vLine[0].x = StartX; 
     vLine[0].y = StartY; 
     vLine[1].x = EndX; 
     vLine[1].y = EndY; 
  
-    pLine->Begin( ); 
-    pLine->Draw( vLine, 2, D3DCOLOR_RGBA( r, g, b, a ) ); 
-    pLine->End( ); 
+    ptrLine->Begin( ); 
+    ptrLine->Draw( vLine, 2, D3DCOLOR_RGBA( r, g, b, a ) ); 
+    ptrLine->End( ); 
 }
  
-void DrawBox(ID3DXLine* pLine, int x, int y, int width, int height, int px, int r, int g, int b, int a) 
+void DrawBox(int x, int y, int width, int height, int px, int r, int g, int b, int a)
 { 
-    DrawFilledBox(pLine, x,y+height,width,px,r,g,b,a); 
-    DrawFilledBox(pLine, x-px,y,px,height,r,g,b,a); 
-    DrawFilledBox(pLine, x,y-px,width,px,r,g,b,a); 
-    DrawFilledBox(pLine, x+width,y,px,height,r,g,b,a); 
+    DrawFilledBox(x,y+height,width,px,r,g,b,a); 
+    DrawFilledBox(x-px,y,px,height,r,g,b,a); 
+    DrawFilledBox(x,y-px,width,px,r,g,b,a); 
+    DrawFilledBox(x+width,y,px,height,r,g,b,a); 
 }
  
 void DrawString(int x, int y, DWORD color, const char *fmt, ...)

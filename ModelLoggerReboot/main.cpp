@@ -10,6 +10,7 @@
 #include <d3dx9.h>
 #include "DXFuncs.h"
 #include "cModel.h"
+#include <cMenu.h>
 #include "ModelDump.h"
 #pragma comment(lib, "d3d9.lib")
 #pragma comment(lib, "d3dx9.lib")
@@ -28,12 +29,13 @@ tDrawIndexedPrimitive oDrawIndexedPrimitive;
 using namespace std;
  
 
- 
+cMouseManager MouseManager;
 RECT m_Rect;
 LPDIRECT3DTEXTURE9 Red = NULL;
 LPDIRECT3DTEXTURE9 Yellow = NULL;
 LPDIRECT3DTEXTURE9 Green = NULL;
 LPDIRECT3DTEXTURE9 Blue = NULL;
+LPDIRECT3DTEXTURE9 Purple = NULL;
 int iSelection = 0;
  
 bool bPopList = false, bDrawElements = false, bAddNew = false, bRefresh = false; //logic bools
@@ -50,6 +52,9 @@ cModel DrawList[10000];
 bool bShowError = true;
 string dbErrorString;
 //////
+
+//test mouse manager
+
 HRESULT WINAPI mEndScene(LPDIRECT3DDEVICE9 pDevice)
 {
 	//MessageBox(NULL, "Entering endscene", "NO ERROR", MB_OK);
@@ -70,13 +75,24 @@ HRESULT WINAPI mEndScene(LPDIRECT3DDEVICE9 pDevice)
 		} 
 		if (Red == NULL)
 			D3DXCreateTextureFromFileInMemory(pDevice, (LPCVOID)&bRed, sizeof(bRed), &Red);
+		if (Blue == NULL)
+			D3DXCreateTextureFromFileInMemory(pDevice, (LPCVOID)&bBlue, sizeof(bBlue), &Blue);
 		if (Green == NULL)
 			D3DXCreateTextureFromFileInMemory(pDevice, (LPCVOID)&bGreen, sizeof(bGreen), &Green);
+		if (Purple == NULL)
+			D3DXCreateTextureFromFileInMemory(pDevice, (LPCVOID)&bPurple, sizeof(bPurple), &Purple);
 	}
+
+	if (ptrLine == NULL)
+		D3DXCreateLine(pDevice, &ptrLine);
+	AppManager->TestForm.DrawTestForm();
 
     m_Rect.top = 210;
 	if (bDrawItemsInFIN)
 	{
+		/*if (ptrLine == NULL)
+			D3DXCreateLine(pDevice, &ptrLine);
+		AppManager->TestForm.DrawTestForm();*/
 		strcpy(b, "Drawing!");
 		dx_Font->DrawTextA(NULL, b, strlen(b), &m_Rect, DT_NOCLIP, D3DCOLOR_XRGB(255, 0, 0));
 		m_Rect.top += 15;
@@ -92,6 +108,35 @@ HRESULT WINAPI mEndScene(LPDIRECT3DDEVICE9 pDevice)
 		strTmp += itoa(iFINSelection + 1, b, 10);
 		dx_Font->DrawTextA(NULL, strTmp.c_str(), strTmp.length(), &m_Rect, DT_NOCLIP, D3DCOLOR_XRGB(255, 255, 255));
 		m_Rect.top += 15;
+
+		strTmp.clear();
+		strTmp = "NumVertices: ";
+		strTmp += itoa(AppManager->DrawList[iFINSelection].NumVertices, b, 10);
+		dx_Font->DrawTextA(NULL, strTmp.c_str(), strTmp.length(), &m_Rect, DT_NOCLIP, D3DCOLOR_XRGB(255, 255, 255));
+		m_Rect.top += 15;
+
+		strTmp.clear();
+		strTmp = "PrimCount: ";
+		strTmp += itoa(AppManager->DrawList[iFINSelection].primCount, b, 10);
+		dx_Font->DrawTextA(NULL, strTmp.c_str(), strTmp.length(), &m_Rect, DT_NOCLIP, D3DCOLOR_XRGB(255, 255, 255));
+		m_Rect.top += 15;
+
+		strTmp.clear();
+		strTmp = "Stride: ";
+		strTmp += itoa(AppManager->DrawList[iFINSelection].stride, b, 10);
+		dx_Font->DrawTextA(NULL, strTmp.c_str(), strTmp.length(), &m_Rect, DT_NOCLIP, D3DCOLOR_XRGB(255, 255, 255));
+		m_Rect.top += 15;
+
+		strTmp.clear();
+		strTmp = "FinFiles:";
+		dx_Font->DrawTextA(NULL, strTmp.c_str(), strTmp.length(), &m_Rect, DT_NOCLIP, D3DCOLOR_XRGB(255, 255, 255));
+		m_Rect.top += 15;
+		for (int i = 0; i < AppManager->iNumFins; ++i)
+		{
+			m_Rect.top += 15;
+			strcpy(b, AppManager->szFinList[i].c_str());
+			dx_Font->DrawTextA(NULL, b, strlen(b), &m_Rect, DT_NOCLIP, D3DCOLOR_XRGB(0, 255, 0));
+		}
 	}
 	m_Rect.top += 15;
 	strcpy(b, "Status of Hooks:");
@@ -120,27 +165,36 @@ HRESULT WINAPI mEndScene(LPDIRECT3DDEVICE9 pDevice)
 		if (bDrawItemsInFIN)
 		{
 			iNumItemsinFIN = AppManager->LoadFinFile();
+			if (AppManager->FindFinFiles() <= 0)
+			{
+				MessageBox(NULL, "No fins", ":(", MB_OK);
+			}
+
 		}
 	}
 	if (GetAsyncKeyState(VK_UP) & 1)
 	{
-		iFINSelection++;
+		//iFINSelection++;
+		AppManager->TestForm.iHeight-= 3;
 	}
 	if (GetAsyncKeyState(VK_DOWN) & 1)
 	{
-		iFINSelection--;
+		//iFINSelection--;
+		AppManager->TestForm.iHeight+=3;
 	}
 	if (GetAsyncKeyState(VK_END) & 1)
 	{
-		iFINSelection = 0;
+		//iFINSelection = 0;
 	}
 	if (GetAsyncKeyState(VK_LEFT) & 1)
 	{
-		iFINSelection -= 100;
+		//iFINSelection -= 100;
+		AppManager->TestForm.iWidth-=3;
 	}
 	if (GetAsyncKeyState(VK_RIGHT) & 1)
 	{
-		iFINSelection += 100;
+		//iFINSelection += 100;
+		AppManager->TestForm.iWidth+=3;
 	}
 
 	if (iFINSelection < 0)
@@ -219,20 +273,15 @@ HRESULT WINAPI mDrawIndexedPrimitive(LPDIRECT3DDEVICE9 pDevice, D3DPRIMITIVETYPE
 	{
 		if (AppManager->DrawList[iFINSelection].NumVertices == NumVertices &&
 			AppManager->DrawList[iFINSelection].primCount == primCount &&
-			AppManager->DrawList[iFINSelection].stride == uStride)
+			AppManager->DrawList[iFINSelection].stride == uStride && uStride == 32)//remove last bit later, this is just to stop text flickering. Filters will be added later to deal with this crap.
 			{
 				pDevice->SetRenderState(D3DRS_ZENABLE, false);
 				pDevice->SetTexture(0, Green);
 				oDrawIndexedPrimitive(pDevice, PrimType, BaseVertexIndex, MinVertexIndex, NumVertices, startIndex, primCount);
 				pDevice->SetRenderState(D3DRS_ZENABLE, true);
-				pDevice->SetTexture(0, Red);
+				pDevice->SetTexture(0, Blue);
 			}
 	}
-	/*pDevice->SetRenderState( D3DRS_ZENABLE,false );
-    pDevice->SetTexture(0, Green);
-    oDrawIndexedPrimitive(pDevice, PrimType, BaseVertexIndex, MinVertexIndex, NumVertices, startIndex, primCount);
-    pDevice->SetRenderState( D3DRS_ZENABLE, true );
-    pDevice->SetTexture(0, Red); */
  
     return oDrawIndexedPrimitive(pDevice, PrimType, BaseVertexIndex, MinVertexIndex, NumVertices, startIndex, primCount);
 }

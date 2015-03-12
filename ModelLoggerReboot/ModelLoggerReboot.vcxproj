@@ -46,7 +46,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>E:\Jack\Source\Libraries\DX92010\Include;E:\Jack\Source\Libraries\Detours;$(IncludePath)</IncludePath>
+    <IncludePath>E:\Jack\Source\Libraries\Dirent\include;E:\Jack\Source\Libraries\Mine;E:\Jack\Source\Libraries\DX92010\Include;E:\Jack\Source\Libraries\Detours;$(IncludePath)</IncludePath>
     <LibraryPath>E:\Jack\Source\Libraries\DX92010\Lib\x86;E:\Jack\Source\Libraries\Detours;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -71,6 +71,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_USRDLL;MODELLOGGERREBOOT_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -81,6 +82,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="E:\Jack\Source\Libraries\Mine\MouseManager.cpp" />
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
