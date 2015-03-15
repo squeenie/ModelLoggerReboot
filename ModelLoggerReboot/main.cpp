@@ -18,6 +18,8 @@
 #pragma comment(lib, "Psapi.lib")
 #define HOOK(func,addy) o##func = (t##func)DetourFunction((PBYTE)addy,(PBYTE)m##func)
  
+
+
 typedef HRESULT (WINAPI* tEndScene)(LPDIRECT3DDEVICE9 pDevice);
 //typedef HRESULT (WINAPI* tSetStreamSource)(UINT StreamNumber,IDirect3DVertexBuffer9 *pStreamData,UINT OffsetInBytes,UINT Stride);
 typedef HRESULT (WINAPI* tDrawIndexedPrimitive)(LPDIRECT3DDEVICE9 pDevice, D3DPRIMITIVETYPE PrimType,INT BaseVertexIndex,UINT MinVertexIndex,UINT NumVertices,UINT startIndex,UINT primCount);
@@ -28,8 +30,8 @@ tDrawIndexedPrimitive oDrawIndexedPrimitive;
  
 using namespace std;
  
+bool IsFavEntryUnique(cModel &entry);
 
-cMouseManager MouseManager;
 RECT m_Rect;
 LPDIRECT3DTEXTURE9 Red = NULL;
 LPDIRECT3DTEXTURE9 Yellow = NULL;
@@ -50,6 +52,7 @@ int iNumItemsinFIN = 0;
 int iFINSelection = 0;
 cModel DrawList[10000];
 bool bShowError = true;
+bool bUseFavList = false;
 string dbErrorString;
 //////
 
@@ -82,20 +85,63 @@ HRESULT WINAPI mEndScene(LPDIRECT3DDEVICE9 pDevice)
 		if (Purple == NULL)
 			D3DXCreateTextureFromFileInMemory(pDevice, (LPCVOID)&bPurple, sizeof(bPurple), &Purple);
 	}
-
+	//#DEBUG_FOLLOW_PATH
+	//AppManager->MsgBox("Endscene");
 	if (ptrLine == NULL)
 		D3DXCreateLine(pDevice, &ptrLine);
-	AppManager->TestForm.DrawTestForm();
+	//#DEBUG_FOLLOW_PATH
+	//AppManager->MsgBox("Created Line");
+	//#DEBUG_FOLLOW_PATH
+	//AppManager->MsgBox("Updating Mouse");
+	MouseManager.Update();
+	//#DEBUG_FOLLOW_PATH
+	//AppManager->MsgBox("Updated Mouse");
+	if (AppManager->TestForm.bDraw)
+	{
+		//#DEBUG_FOLLOW_PATH
+		//AppManager->MsgBox("Drawing Test Form");
+		AppManager->TestForm.DrawTestForm(MouseManager, AppManager->iNumFavModels);
+		if (AppManager->TestForm.pButtonList->isClicked(&MouseManager))
+		{
+			if (!bDrawItemsInFIN)
+			{
+				bDrawItemsInFIN = true;
+			}
+			else
+			{
+				if (AppManager->iNumFavModels == 0)
+				{
+					memcpy(&AppManager->FavList[AppManager->iNumFavModels], &AppManager->DrawList[iFINSelection], sizeof(cModel));
+					AppManager->iNumFavModels++;
+				}
+				else if (AppManager->iNumFavModels < 100)
+				{
+					if ((IsFavEntryUnique(AppManager->DrawList[iFINSelection])))
+					{
+						memcpy(&AppManager->FavList[AppManager->iNumFavModels], &AppManager->DrawList[iFINSelection], sizeof(cModel));
+						AppManager->iNumFavModels++;
+					}
+				}
+			}
+		}
+	}
 
     m_Rect.top = 210;
 	if (bDrawItemsInFIN)
 	{
-		/*if (ptrLine == NULL)
-			D3DXCreateLine(pDevice, &ptrLine);
-		AppManager->TestForm.DrawTestForm();*/
-		strcpy(b, "Drawing!");
-		dx_Font->DrawTextA(NULL, b, strlen(b), &m_Rect, DT_NOCLIP, D3DCOLOR_XRGB(255, 0, 0));
-		m_Rect.top += 15;
+		if (bUseFavList)
+		{
+			strcpy(b, "Drawing from favourites list");
+			dx_Font->DrawTextA(NULL, b, strlen(b), &m_Rect, DT_NOCLIP, D3DCOLOR_XRGB(255, 0, 0));
+			m_Rect.top += 15;
+		}
+		else
+		{
+			strcpy(b, "Drawing from FIN list");
+			dx_Font->DrawTextA(NULL, b, strlen(b), &m_Rect, DT_NOCLIP, D3DCOLOR_XRGB(255, 0, 0));
+			m_Rect.top += 15;
+		}
+		
 
 		strTmp.clear();
 		strTmp = "Num items in FIN: ";
@@ -138,6 +184,22 @@ HRESULT WINAPI mEndScene(LPDIRECT3DDEVICE9 pDevice)
 			dx_Font->DrawTextA(NULL, b, strlen(b), &m_Rect, DT_NOCLIP, D3DCOLOR_XRGB(0, 255, 0));
 		}
 	}
+
+	//#DEBUG_FOLLOW_PATH
+	//AppManager->MsgBox("Printing Mouse Coords");
+
+	//MouseStuff
+	m_Rect.top += 15;
+	strTmp = "Mouse XY: ";
+	strTmp += itoa(MouseManager.CurrentPos.x, b, 10);
+	strTmp += ", ";
+	strTmp += itoa(MouseManager.CurrentPos.y, b, 10);
+	dx_Font->DrawTextA(NULL, strTmp.c_str(), strTmp.length(), &m_Rect, DT_NOCLIP, D3DCOLOR_XRGB(0, 255, 0));
+	//
+
+	//#DEBUG_FOLLOW_PATH
+	//AppManager->MsgBox("Printing Hook status");
+
 	m_Rect.top += 15;
 	strcpy(b, "Status of Hooks:");
 	dx_Font->DrawTextA(NULL, b, strlen(b), &m_Rect, DT_NOCLIP, D3DCOLOR_XRGB(0, 0, 255));
@@ -172,29 +234,39 @@ HRESULT WINAPI mEndScene(LPDIRECT3DDEVICE9 pDevice)
 
 		}
 	}
+	if (GetAsyncKeyState(VK_HOME) & 1)
+	{
+		AppManager->TestForm.bDraw = !AppManager->TestForm.bDraw;
+	}
+
 	if (GetAsyncKeyState(VK_UP) & 1)
 	{
-		//iFINSelection++;
-		AppManager->TestForm.iHeight-= 3;
+		iFINSelection++;
+		//AppManager->TestForm.iHeight-= 3;
 	}
 	if (GetAsyncKeyState(VK_DOWN) & 1)
 	{
-		//iFINSelection--;
-		AppManager->TestForm.iHeight+=3;
+		iFINSelection--;
+		//AppManager->TestForm.iHeight+=3;
 	}
 	if (GetAsyncKeyState(VK_END) & 1)
 	{
-		//iFINSelection = 0;
+		iFINSelection = 0;
 	}
 	if (GetAsyncKeyState(VK_LEFT) & 1)
 	{
-		//iFINSelection -= 100;
-		AppManager->TestForm.iWidth-=3;
+		iFINSelection -= 100;
+		//AppManager->TestForm.iWidth-=3;
 	}
 	if (GetAsyncKeyState(VK_RIGHT) & 1)
 	{
-		//iFINSelection += 100;
-		AppManager->TestForm.iWidth+=3;
+		iFINSelection += 100;
+		//AppManager->TestForm.iWidth+=3;
+	}
+	if (GetAsyncKeyState(VK_BACK))
+	{
+		bUseFavList = !bUseFavList;
+		iFINSelection = 0;
 	}
 
 	if (iFINSelection < 0)
@@ -210,7 +282,7 @@ HRESULT WINAPI mEndScene(LPDIRECT3DDEVICE9 pDevice)
 	{ 
 		m_Rect.top += 15;
 		strcpy(b, "Dumping");
-		dx_Font->DrawTextA(NULL, b, strlen(b), &m_Rect, DT_NOCLIP, D3DCOLOR_XRGB(255, 0, 00));
+		dx_Font->DrawTextA(NULL, b, strlen(b), &m_Rect, DT_NOCLIP, D3DCOLOR_XRGB(255, 0, 0));
 	}
 
 
@@ -271,9 +343,11 @@ HRESULT WINAPI mDrawIndexedPrimitive(LPDIRECT3DDEVICE9 pDevice, D3DPRIMITIVETYPE
 	}
 	if (bDrawItemsInFIN)
 	{
-		if (AppManager->DrawList[iFINSelection].NumVertices == NumVertices &&
-			AppManager->DrawList[iFINSelection].primCount == primCount &&
-			AppManager->DrawList[iFINSelection].stride == uStride && uStride == 32)//remove last bit later, this is just to stop text flickering. Filters will be added later to deal with this crap.
+		if (!bUseFavList)
+		{
+			if (AppManager->DrawList[iFINSelection].NumVertices == NumVertices &&
+				AppManager->DrawList[iFINSelection].primCount == primCount &&
+				AppManager->DrawList[iFINSelection].stride == uStride && uStride == 32)//remove last bit later, this is just to stop text flickering. Filters will be added later to deal with this crap.
 			{
 				pDevice->SetRenderState(D3DRS_ZENABLE, false);
 				pDevice->SetTexture(0, Green);
@@ -281,6 +355,23 @@ HRESULT WINAPI mDrawIndexedPrimitive(LPDIRECT3DDEVICE9 pDevice, D3DPRIMITIVETYPE
 				pDevice->SetRenderState(D3DRS_ZENABLE, true);
 				pDevice->SetTexture(0, Blue);
 			}
+		}
+		else
+		{
+			if (AppManager->iNumFavModels > 0)
+			{
+				if (AppManager->FavList[iFINSelection].NumVertices == NumVertices &&
+					AppManager->FavList[iFINSelection].primCount == primCount &&
+					AppManager->FavList[iFINSelection].stride == uStride /*&& uStride == 32*/)	//remove last bit later, this is just to stop text flickering. Filters will be added later to deal with this crap.
+				{
+					pDevice->SetRenderState(D3DRS_ZENABLE, false);
+					pDevice->SetTexture(0, Green);
+					oDrawIndexedPrimitive(pDevice, PrimType, BaseVertexIndex, MinVertexIndex, NumVertices, startIndex, primCount);
+					pDevice->SetRenderState(D3DRS_ZENABLE, true);
+					pDevice->SetTexture(0, Blue);
+				}
+			}
+		}
 	}
  
     return oDrawIndexedPrimitive(pDevice, PrimType, BaseVertexIndex, MinVertexIndex, NumVertices, startIndex, primCount);
@@ -319,3 +410,26 @@ BOOL WINAPI DllMain(HINSTANCE hInstance, DWORD Reason, LPVOID lpReserved)
     return true;
 }			
 
+bool IsFavEntryUnique(cModel &entry) //Eventually put this in the logger and remove dependancy on the sorter? (potentially...hash tables will make it a whole lot faster)
+{
+	bool bUnique = false;
+	if (AppManager->iNumFavModels == 0)
+	{
+		return true;
+	}
+	for (int iListIndex = 0; iListIndex < AppManager->iNumFavModels; ++iListIndex)
+	{
+		if (AppManager->FavList[iListIndex].NumVertices == entry.NumVertices &&
+			AppManager->FavList[iListIndex].primCount == entry.primCount &&
+			AppManager->FavList[iListIndex].stride == entry.stride)
+		{
+			bUnique = false;
+			break;
+		}
+		else
+		{
+			bUnique = true;
+		}
+	}
+	return bUnique;
+}

@@ -12,9 +12,7 @@
 //#include <logger.h>
 
 //TODO:
-//Create form
-//Create favourites list, just one for now
-//Add models to list via form
+//Implement FavList + a slightly nicer UI and we're set for Alpha release!
 
 //cLogger Logger;
 char debug[256];
@@ -72,6 +70,8 @@ public:
 	void WriteInfoFile();
 	void ReadInfoFile();
 	void CreateInfoFile();
+	void MsgBox(char *Message);
+
 	//New test stuff ie not thought out properly yet
 	cModel *DrawList;
 	cModel *TempList;
@@ -81,6 +81,7 @@ public:
 	int LoadFinFile();
 	int FindFinFiles();
 	int iNumFins;
+	int iNumFavModels;
 	string szFinList[32]; //fix this
 	bool bFinListInitialized;
 	ID3DXLine *ptrLine;
@@ -104,6 +105,7 @@ void cAppManager::Initialize()
 	this->ReadInfoFile();
 	//this->szFinList = NULL;
 	this->iNumFins = 0;
+	this->iNumFavModels = 0;
 
 	//test stuff
 	this->TestForm.x = 500;
@@ -111,15 +113,18 @@ void cAppManager::Initialize()
 	this->TestForm.bDraw = true;
 	this->TestForm.iHeight = 200;
 	this->TestForm.iWidth = 400;
+	
 	this->TestForm.r = 110;
 	this->TestForm.g = 110;
 	this->TestForm.b = 110;
 	this->TestForm.a = 125;
-	this->TestForm.szFormName = "TestForm";
-	this->TestForm.szFormTitle = "TestFormTitle";
+	this->TestForm.szFormText = "Favourites";
+	this->TestForm.szFormTitle = "TestForm";
+	this->TestForm.bClicked = false;
+	this->TestForm.bMouseStilDown = false;
 
 	this->TestForm.pButtonList = new cButton;
-	this->TestForm.pButtonList->szButtonText = "Nails";
+	this->TestForm.pButtonList->szButtonText = "Add";
 	this->TestForm.pButtonList->szButtonName = "TestButton";
 	this->TestForm.pButtonList->iHeight = 32;
 	this->TestForm.pButtonList->iWidth = 64;
@@ -294,6 +299,11 @@ int cAppManager::FindFinFiles()
 
 	closedir(dir);
 	return this->iNumFins;
+}
+
+void cAppManager::MsgBox(char *Message)
+{
+	MessageBox(NULL, Message, "DEBUG", MB_OK);
 }
 
 cAppManager *AppManager = NULL;
