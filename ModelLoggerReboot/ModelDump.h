@@ -106,6 +106,7 @@ void cAppManager::Initialize()
 	//this->szFinList = NULL;
 	this->iNumFins = 0;
 	this->iNumFavModels = 0;
+	this->bFinListInitialized = false;
 
 	//test stuff
 	this->TestForm.x = 500;
@@ -254,6 +255,7 @@ int cAppManager::LoadFinFile()
 
 		if (this->DrawList != NULL)
 		{
+			this->bFinListInitialized = true;
 			return size;
 		}
 		else
@@ -262,6 +264,7 @@ int cAppManager::LoadFinFile()
 			return -1;
 		}
 	}
+	
 	else
 	{
 		return -1;

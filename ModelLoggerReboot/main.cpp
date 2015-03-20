@@ -101,7 +101,7 @@ HRESULT WINAPI mEndScene(LPDIRECT3DDEVICE9 pDevice)
 		//#DEBUG_FOLLOW_PATH
 		//AppManager->MsgBox("Drawing Test Form");
 		AppManager->TestForm.DrawTestForm(MouseManager, AppManager->iNumFavModels);
-		if (AppManager->TestForm.pButtonList->isClicked(&MouseManager))
+		if (AppManager->TestForm.pButtonList->isClicked(&MouseManager) || ((GetAsyncKeyState(VK_SHIFT) && GetAsyncKeyState(VK_SPACE)) && AppManager->bFinListInitialized))
 		{
 			if (!bDrawItemsInFIN)
 			{
@@ -127,7 +127,7 @@ HRESULT WINAPI mEndScene(LPDIRECT3DDEVICE9 pDevice)
 	}
 
     m_Rect.top = 210;
-	if (bDrawItemsInFIN)
+	if (bDrawItemsInFIN && AppManager->bFinListInitialized)
 	{
 		if (bUseFavList)
 		{
@@ -263,7 +263,7 @@ HRESULT WINAPI mEndScene(LPDIRECT3DDEVICE9 pDevice)
 		iFINSelection += 100;
 		//AppManager->TestForm.iWidth+=3;
 	}
-	if (GetAsyncKeyState(VK_BACK))
+	if (GetAsyncKeyState(VK_MENU) & 1)
 	{
 		bUseFavList = !bUseFavList;
 		iFINSelection = 0;
@@ -341,7 +341,7 @@ HRESULT WINAPI mDrawIndexedPrimitive(LPDIRECT3DDEVICE9 pDevice, D3DPRIMITIVETYPE
 			AppManager->bWasDumping = false;
 		}
 	}
-	if (bDrawItemsInFIN)
+	if (bDrawItemsInFIN && AppManager->bFinListInitialized)
 	{
 		if (!bUseFavList)
 		{
@@ -360,15 +360,18 @@ HRESULT WINAPI mDrawIndexedPrimitive(LPDIRECT3DDEVICE9 pDevice, D3DPRIMITIVETYPE
 		{
 			if (AppManager->iNumFavModels > 0)
 			{
-				if (AppManager->FavList[iFINSelection].NumVertices == NumVertices &&
-					AppManager->FavList[iFINSelection].primCount == primCount &&
-					AppManager->FavList[iFINSelection].stride == uStride /*&& uStride == 32*/)	//remove last bit later, this is just to stop text flickering. Filters will be added later to deal with this crap.
+				for (int i = 0; i < AppManager->iNumFavModels; ++i)
 				{
-					pDevice->SetRenderState(D3DRS_ZENABLE, false);
-					pDevice->SetTexture(0, Green);
-					oDrawIndexedPrimitive(pDevice, PrimType, BaseVertexIndex, MinVertexIndex, NumVertices, startIndex, primCount);
-					pDevice->SetRenderState(D3DRS_ZENABLE, true);
-					pDevice->SetTexture(0, Blue);
+					if (AppManager->FavList[i].NumVertices == NumVertices &&
+						AppManager->FavList[i].primCount == primCount &&
+						AppManager->FavList[i].stride == uStride /*&& uStride == 32*/)	//remove last bit later, this is just to stop text flickering. Filters will be added later to deal with this crap.
+					{
+						pDevice->SetRenderState(D3DRS_ZENABLE, false);
+						pDevice->SetTexture(0, Green);
+						oDrawIndexedPrimitive(pDevice, PrimType, BaseVertexIndex, MinVertexIndex, NumVertices, startIndex, primCount);
+						pDevice->SetRenderState(D3DRS_ZENABLE, true);
+						pDevice->SetTexture(0, Blue);
+					}
 				}
 			}
 		}
@@ -395,6 +398,7 @@ void SetHooks()
 int WINAPI DllThread()
 {   
     SetHooks();
+	CreateDirectory("dumps", NULL);
     //AllocConsole();
     return 0;
 }
