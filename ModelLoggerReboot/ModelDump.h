@@ -55,6 +55,9 @@ public:
 	ofstream DumpFileOut;
 	ifstream InfoFileIn;
 	ofstream InfoFileOut;
+
+	ifstream FileIn; // to replace redundant things
+	ofstream FileOut;
 	
 	bool bIsDumping;
 	bool bWasDumping;
@@ -75,9 +78,12 @@ public:
 	//New test stuff ie not thought out properly yet
 	cModel *DrawList;
 	cModel *TempList;
-	cModel FavList[100]; // Change to dynamic
+	cModel FavList[1000]; // Change to dynamic
+	cModel FavList2[1000]; // Change to dynamic
 	ifstream FinFileIn;
 	cForm TestForm;
+	bool LoadFile(string szFileName, int *TotalEntries, cModel *List);
+	bool SaveFile(string szFileName, int TotalEntries, cModel *List);
 	int LoadFinFile();
 	int FindFinFiles();
 	int iNumFins;
@@ -93,7 +99,6 @@ cAppManager is used to handle everything. At the moment it is very basic but it 
 */
 void cAppManager::Initialize()
 {
-	//TODO create directory if it doesnt exist
 	this->DrawList = NULL;
 	this->CurrentChunk = new sChunk;
 	this->DumpFile = new sModelDumpFilev1;
@@ -107,13 +112,14 @@ void cAppManager::Initialize()
 	this->iNumFins = 0;
 	this->iNumFavModels = 0;
 	this->bFinListInitialized = false;
+	
 
 	//test stuff
 	this->TestForm.x = 500;
 	this->TestForm.y = 50;
 	this->TestForm.bDraw = true;
 	this->TestForm.iHeight = 200;
-	this->TestForm.iWidth = 400;
+	this->TestForm.iWidth = 200;
 	
 	this->TestForm.r = 110;
 	this->TestForm.g = 110;
@@ -228,10 +234,80 @@ void cAppManager::Cleanup()
 	delete CurrentChunk;
 }
 
-int cAppManager::LoadFinFile()
+bool cAppManager::LoadFile(string szFileName, int *TotalEntries, cModel *List) //To replace redundant functions
+{
+	int size = 0;
+	this->FileIn.open("dumps\\" + szFileName);
+	if (this->FileIn)
+	{
+		this->FileIn >> size;
+	/*	if (FavList == NULL)
+		{
+			FavList = new cModel[size * 2];
+		}*/
+		//else
+		//{
+		//	//delete List;
+		//	List = new cModel[size];
+		//}
+		for (int i = 0; i < size; ++i)
+		{
+			this->FileIn >> FavList[i].NumVertices;
+			this->FileIn >> FavList[i].primCount;
+			this->FileIn >> FavList[i].stride;
+			//*TotalEntries++;
+			this->iNumFavModels++;
+		}
+
+		this->FileIn.close();
+
+		if (List != NULL)
+		{
+			return true;
+		}
+		else
+		{
+			MessageBox(NULL, "List NULL", "SadFace", MB_OK);
+			return false;
+		}
+	}
+
+	else
+	{
+		return false;
+	}
+}
+
+bool cAppManager::SaveFile(string szFileName, int TotalEntries, cModel *List) //To replace LoadFin, LoadDump etc
 {
 	int size = 0; // TODO class up FIN stuff
-	this->FinFileIn.open("dumps\\" + this->szGameName + ".fin");
+	szFileName = "dumps\\" + szFileName;
+	this->FileOut.open(szFileName);
+	if (this->FileOut)
+	{
+		FileOut << TotalEntries << endl;
+
+		for (int i = 0; i < TotalEntries; ++i)
+		{
+			FileOut << List[i].NumVertices << endl;
+			FileOut << List[i].primCount << endl;
+			FileOut << List[i].stride << endl;
+		}
+
+		FileOut.close();
+		return true;
+	}
+
+	else
+	{
+		return false;
+	}
+}
+
+int cAppManager::LoadFinFile() //to be replaced with loadfile
+{
+	int size = 0; // TODO class up FIN stuff
+	this->FinFileIn.open("dumps\\test.fin");
 	if (this->FinFileIn)
 	{
 		this->FinFileIn >> size;

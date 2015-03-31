@@ -18,7 +18,7 @@
 #pragma comment(lib, "Psapi.lib")
 #define HOOK(func,addy) o##func = (t##func)DetourFunction((PBYTE)addy,(PBYTE)m##func)
  
-
+void SetHooks();
 
 typedef HRESULT (WINAPI* tEndScene)(LPDIRECT3DDEVICE9 pDevice);
 //typedef HRESULT (WINAPI* tSetStreamSource)(UINT StreamNumber,IDirect3DVertexBuffer9 *pStreamData,UINT OffsetInBytes,UINT Stride);
@@ -76,6 +76,8 @@ HRESULT WINAPI mEndScene(LPDIRECT3DDEVICE9 pDevice)
 			//Logger.WriteLog("Failed");
 			MessageBox(NULL, "AppManager failed to Init", "ERROR", MB_OK);
 		} 
+		iNumItemsinFIN = AppManager->LoadFinFile();
+
 		if (Red == NULL)
 			D3DXCreateTextureFromFileInMemory(pDevice, (LPCVOID)&bRed, sizeof(bRed), &Red);
 		if (Blue == NULL)
@@ -101,26 +103,19 @@ HRESULT WINAPI mEndScene(LPDIRECT3DDEVICE9 pDevice)
 		//#DEBUG_FOLLOW_PATH
 		//AppManager->MsgBox("Drawing Test Form");
 		AppManager->TestForm.DrawTestForm(MouseManager, AppManager->iNumFavModels);
-		if (AppManager->TestForm.pButtonList->isClicked(&MouseManager) || ((GetAsyncKeyState(VK_SHIFT) && GetAsyncKeyState(VK_SPACE)) && AppManager->bFinListInitialized))
+		if ((AppManager->TestForm.pButtonList->isClicked(&MouseManager) || ((GetAsyncKeyState(VK_SHIFT) && GetAsyncKeyState(0x42))) && AppManager->bFinListInitialized))
 		{
-			if (!bDrawItemsInFIN)
+			if (AppManager->iNumFavModels == 0)
 			{
-				bDrawItemsInFIN = true;
+				memcpy(&AppManager->FavList[AppManager->iNumFavModels], &AppManager->DrawList[iFINSelection], sizeof(cModel));
+				AppManager->iNumFavModels++;
 			}
-			else
+			else if (AppManager->iNumFavModels < 100)
 			{
-				if (AppManager->iNumFavModels == 0)
+				if ((IsFavEntryUnique(AppManager->DrawList[iFINSelection])))
 				{
 					memcpy(&AppManager->FavList[AppManager->iNumFavModels], &AppManager->DrawList[iFINSelection], sizeof(cModel));
 					AppManager->iNumFavModels++;
-				}
-				else if (AppManager->iNumFavModels < 100)
-				{
-					if ((IsFavEntryUnique(AppManager->DrawList[iFINSelection])))
-					{
-						memcpy(&AppManager->FavList[AppManager->iNumFavModels], &AppManager->DrawList[iFINSelection], sizeof(cModel));
-						AppManager->iNumFavModels++;
-					}
 				}
 			}
 		}
@@ -278,6 +273,30 @@ HRESULT WINAPI mEndScene(LPDIRECT3DDEVICE9 pDevice)
 		iFINSelection = iNumItemsinFIN - 1;
 	}
 
+	if (GetAsyncKeyState(VK_F6) & 1)
+	{
+		if (AppManager->iNumFavModels > 0)
+		{
+			AppManager->SaveFile("test.fav", AppManager->iNumFavModels, AppManager->FavList);
+		}
+		else
+		{
+			AppManager->MsgBox("No favourites!");
+		}
+	}
+	if (GetAsyncKeyState(VK_F7) & 1)
+	{
+		if (!AppManager->LoadFile("test.fav", &AppManager->iNumFavModels, AppManager->FavList))
+		{
+			AppManager->MsgBox("Couldn't load Favlist");
+		}
+		
+		strTmp.clear();
+		strTmp = "Loaded Fav List with: ";
+		strTmp += itoa(AppManager->iNumFavModels, b, 10);
+		AppManager->MsgBox((char*)strTmp.c_str());
+	}
+
 	if(bPopList)
 	{ 
 		m_Rect.top += 15;
@@ -293,84 +312,90 @@ HRESULT WINAPI mEndScene(LPDIRECT3DDEVICE9 pDevice)
 		dx_Font->DrawTextA(NULL, dbErrorString.c_str(), dbErrorString.length(), &m_Rect, DT_NOCLIP, D3DCOLOR_XRGB(255, 0, 00));
 	}
 
+
     return oEndScene(pDevice);
 }
 
  
 HRESULT WINAPI mDrawIndexedPrimitive(LPDIRECT3DDEVICE9 pDevice, D3DPRIMITIVETYPE PrimType,INT BaseVertexIndex,UINT MinVertexIndex,UINT NumVertices,UINT startIndex,UINT primCount)
 {
-	//MessageBox(NULL, "In DIP", "NO ERROR", MB_OK);
-	bdip = true;
-	//Logger.WriteLog("Calling GetStreamSource");
-	IDirect3DVertexBuffer9* vertStreamData;
-    UINT uOffsetInBytes;
-    UINT uStride;
-    pDevice->GetStreamSource(0,&vertStreamData,&uOffsetInBytes,&uStride);
-	//Logger.WriteLog("Done");
-	if(bPopList)
+	if (AppManager != NULL)
 	{
-		AppManager->ReadInfoFile();
-		AppManager->bIsDumping = true;
-		AppManager->bWasDumping = true;
-		//Logger.WriteLog("Populating List...");
-		if(AppManager->CurrentChunk->iNumItems >= MODELS_PER_CHUNK)
+
+
+		//MessageBox(NULL, "In DIP", "NO ERROR", MB_OK);
+		bdip = true;
+		//Logger.WriteLog("Calling GetStreamSource");
+		IDirect3DVertexBuffer9* vertStreamData;
+		UINT uOffsetInBytes;
+		UINT uStride;
+		pDevice->GetStreamSource(0, &vertStreamData, &uOffsetInBytes, &uStride);
+		//Logger.WriteLog("Done");
+		if (bPopList)
 		{
-			//MessageBox(NULL, "Dumping Chunk", "NO ERROR", MB_OK);
-			//Logger.WriteLog("Too many items! Dumping chunk!");
-			AppManager->DumpChunk();
-		}
-		//Logger.WriteLog("Adding Model to chunk...");
-		AppManager->CurrentChunk->cList[AppManager->CurrentChunk->iNumItems].NumVertices = NumVertices;
-		AppManager->CurrentChunk->cList[AppManager->CurrentChunk->iNumItems].primCount = primCount;
-		AppManager->CurrentChunk->cList[AppManager->CurrentChunk->iNumItems].stride = uStride;
-		AppManager->CurrentChunk->iNumItems++;
-	}
-	else
-	{
-		AppManager->bIsDumping = false;
-		if(AppManager->CurrentChunk->iNumItems != 0)
-		{
-			//Logger.WriteLog("Logging stopped, dumping last chunk.");
-			AppManager->DumpChunk();
-		}
-		if(!AppManager->bIsDumping && AppManager->bWasDumping)
-		{
-			
-			AppManager->iTotalDumps += 1 ;
-			AppManager->WriteInfoFile();
-			AppManager->bWasDumping = false;
-		}
-	}
-	if (bDrawItemsInFIN && AppManager->bFinListInitialized)
-	{
-		if (!bUseFavList)
-		{
-			if (AppManager->DrawList[iFINSelection].NumVertices == NumVertices &&
-				AppManager->DrawList[iFINSelection].primCount == primCount &&
-				AppManager->DrawList[iFINSelection].stride == uStride && uStride == 32)//remove last bit later, this is just to stop text flickering. Filters will be added later to deal with this crap.
+			AppManager->ReadInfoFile();
+			AppManager->bIsDumping = true;
+			AppManager->bWasDumping = true;
+			//Logger.WriteLog("Populating List...");
+			if (AppManager->CurrentChunk->iNumItems >= MODELS_PER_CHUNK)
 			{
-				pDevice->SetRenderState(D3DRS_ZENABLE, false);
-				pDevice->SetTexture(0, Green);
-				oDrawIndexedPrimitive(pDevice, PrimType, BaseVertexIndex, MinVertexIndex, NumVertices, startIndex, primCount);
-				pDevice->SetRenderState(D3DRS_ZENABLE, true);
-				pDevice->SetTexture(0, Blue);
+				//MessageBox(NULL, "Dumping Chunk", "NO ERROR", MB_OK);
+				//Logger.WriteLog("Too many items! Dumping chunk!");
+				AppManager->DumpChunk();
 			}
+			//Logger.WriteLog("Adding Model to chunk...");
+			AppManager->CurrentChunk->cList[AppManager->CurrentChunk->iNumItems].NumVertices = NumVertices;
+			AppManager->CurrentChunk->cList[AppManager->CurrentChunk->iNumItems].primCount = primCount;
+			AppManager->CurrentChunk->cList[AppManager->CurrentChunk->iNumItems].stride = uStride;
+			AppManager->CurrentChunk->iNumItems++;
 		}
 		else
 		{
-			if (AppManager->iNumFavModels > 0)
+			AppManager->bIsDumping = false;
+			if (AppManager->CurrentChunk->iNumItems != 0)
 			{
-				for (int i = 0; i < AppManager->iNumFavModels; ++i)
+				//Logger.WriteLog("Logging stopped, dumping last chunk.");
+				AppManager->DumpChunk();
+			}
+			if (!AppManager->bIsDumping && AppManager->bWasDumping)
+			{
+
+				AppManager->iTotalDumps += 1;
+				AppManager->WriteInfoFile();
+				AppManager->bWasDumping = false;
+			}
+		}
+		if (bDrawItemsInFIN && AppManager->bFinListInitialized)
+		{
+			if (!bUseFavList)
+			{
+				if (AppManager->DrawList[iFINSelection].NumVertices == NumVertices &&
+					AppManager->DrawList[iFINSelection].primCount == primCount &&
+					AppManager->DrawList[iFINSelection].stride == uStride && uStride == 32)//remove last bit later, this is just to stop text flickering. Filters will be added later to deal with this crap.
 				{
-					if (AppManager->FavList[i].NumVertices == NumVertices &&
-						AppManager->FavList[i].primCount == primCount &&
-						AppManager->FavList[i].stride == uStride /*&& uStride == 32*/)	//remove last bit later, this is just to stop text flickering. Filters will be added later to deal with this crap.
+					pDevice->SetRenderState(D3DRS_ZENABLE, false);
+					pDevice->SetTexture(0, Green);
+					oDrawIndexedPrimitive(pDevice, PrimType, BaseVertexIndex, MinVertexIndex, NumVertices, startIndex, primCount);
+					pDevice->SetRenderState(D3DRS_ZENABLE, true);
+					pDevice->SetTexture(0, Blue);
+				}
+			}
+			else
+			{
+				if (AppManager->iNumFavModels > 0)
+				{
+					for (int i = 0; i < AppManager->iNumFavModels; ++i)
 					{
-						pDevice->SetRenderState(D3DRS_ZENABLE, false);
-						pDevice->SetTexture(0, Green);
-						oDrawIndexedPrimitive(pDevice, PrimType, BaseVertexIndex, MinVertexIndex, NumVertices, startIndex, primCount);
-						pDevice->SetRenderState(D3DRS_ZENABLE, true);
-						pDevice->SetTexture(0, Blue);
+						if (AppManager->FavList[i].NumVertices == NumVertices &&
+							AppManager->FavList[i].primCount == primCount &&
+							AppManager->FavList[i].stride == uStride /*&& uStride == 32*/)	//remove last bit later, this is just to stop text flickering. Filters will be added later to deal with this crap.
+						{
+							pDevice->SetRenderState(D3DRS_ZENABLE, false);
+							pDevice->SetTexture(0, Green);
+							oDrawIndexedPrimitive(pDevice, PrimType, BaseVertexIndex, MinVertexIndex, NumVertices, startIndex, primCount);
+							pDevice->SetRenderState(D3DRS_ZENABLE, true);
+							pDevice->SetTexture(0, Blue);
+						}
 					}
 				}
 			}
